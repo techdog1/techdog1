@@ -1,0 +1,80 @@
+In my search for how to set fixed usb port names. I found an article that had some good advice, but relied on wine and symbolic links. 
+The information was good to use to identify the usb attributes that I needed to config the settings.
+Using wine and links is not how I wanted to do it.
+I used the command "dmesg | grep ttyUSB" to find the assigned ports for ttyUSB0 and ttyUSB1
+I wanted USB1 to be assigned to the Bus 001 Device 004: ID 067b:2303 Prolific Technology, Inc. PL2303 Serial Port.
+I wanted ISB0 to be assigned to the Bus 001 Device 006: ID 10c4:ea60 Cygnal Integrated Products, Inc. CP2102/CP2109 UART Bridge Controller [CP210x family]
+Then I used the command "udevadm info --name=/dev/ttyUSB0 --attribute-walk", to find the all of the attributes for the USB port connected devices.
+I was looking for the ATTRS such as the idProduct: xx, or idVendor:xx, or other attribute values to use to differentiate the devices.
+
+
+Bus 001 Device 006: ID 10c4:ea60 Cygnal Integrated Products, Inc. CP2102/CP2109 UART Bridge Controller [CP210x family]
+This is the GPS reciever for TunerStudio GPS speed.
+Bus 001 Device 004: ID 067b:2303 Prolific Technology, Inc. PL2303 Serial Port
+This is the USB to serial converter to the Microsquirt. 
+
+lsusb
+Bus 001 Device 004: ID 067b:2303 Prolific Technology, Inc. PL2303 Serial Port
+Bus 001 Device 006: ID 046d:c52b Logitech, Inc. Unifying Receiver
+Bus 001 Device 005: ID 0930:6544 Toshiba Corp. TransMemory-Mini / Kingston DataTraveler 2.0 Stick
+Bus 001 Device 007: ID 0424:7800 Standard Microsystems Corp. 
+Bus 001 Device 003: ID 0424:2514 Standard Microsystems Corp. USB 2.0 Hub
+Bus 001 Device 002: ID 0424:2514 Standard Microsystems Corp. USB 2.0 Hub
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+pi@Bronco:~ $ 
+
+Removed the usb pendrive and re-connecting the GPS with a different cable (long one).
+
+Bus 001 Device 008: ID 10c4:ea60 Cygnal Integrated Products, Inc. CP2102/CP2109 UART Bridge Controller [CP210x family]
+
+Bus 001 Device 005: ID 046d:c52b Logitech, Inc. Unifying Receiver
+Bus 001 Device 007: ID 0424:7800 Standard Microsystems Corp. 
+Bus 001 Device 003: ID 0424:2514 Standard Microsystems Corp. USB 2.0 Hub
+Bus 001 Device 002: ID 0424:2514 Standard Microsystems Corp. USB 2.0 Hub
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+
+usb 1-1.2: new full-speed USB device number 4 using dwc_otg
+[    4.494672] of_cfs_init
+[    4.666715] usb 1-1.2: New USB device found, idVendor=067b, idProduct=2303, bcdDevice= 4.00
+[    4.694455] of_cfs_init: OK
+[    4.704719] usb 1-1.2: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+[    4.728923] mmc0: host does not support reading read-only switch, assuming write-enable
+[    4.740923] usb 1-1.2: Product: USB-Serial Controller D
+[    4.740936] usb 1-1.2: Manufacturer: Prolific Technology Inc.
+
+usb 1-1.3: new full-speed USB device number 6 using dwc_otg
+[    5.115306] hid-generic 0003:046D:C52B.0001: input,hidraw0: USB HID v1.11 Keyboard [Logitech USB Receiver] on usb-3f980000.usb-1.1.3/input0
+[    5.144019] input: Logitech USB Receiver Mouse as /devices/platform/soc/3f980000.usb/usb1/1-1/1-1.1/1-1.1.3/1-1.1.3:1.1/0003:046D:C52B.0002/input/input1un
+[    5.165950] input: Logitech USB Receiver Consumer Control as /devices/platform/soc/3f980000.usb/usb1/1-1/1-1.1/1-1.1.3/1-1.1.3:1.1/0003:046D:C52B.0002/input/input2
+[    5.240357] usb 1-1.3: New USB device found, idVendor=10c4, idProduct=ea60, bcdDevice= 1.00
+[    5.256414] usb 1-1.3: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[    5.271390] usb 1-1.3: Product: CP2104 USB to UART Bridge Controller
+[    5.285376] usb 1-1.3: Manufacturer: Silicon Labs
+[    5.297637] usb 1-1.3: SerialNumber: 02328390
+
+unpluged and replugged the GPS. changed GPS settings in TS to USB2, speedo works!
+1906.950321] cp210x 1-1.3:1.0: device disconnected
+
+[ 1911.849718] usb 1-1.3: new full-speed USB device number 8 using dwc_otg
+[ 1911.995740] usb 1-1.3: New USB device found, idVendor=10c4, idProduct=ea60, bcdDevice= 1.00
+[ 1911.995766] usb 1-1.3: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[ 1911.995782] usb 1-1.3: Product: CP2104 USB to UART Bridge Controller
+[ 1911.995797] usb 1-1.3: Manufacturer: Silicon Labs
+[ 1911.995811] usb 1-1.3: SerialNumber: 02328390
+[ 1911.999088] cp210x 1-1.3:1.0: cp210x converter detected
+[ 1912.005963] usb 1-1.3: cp210x converter now attached to ttyUSB2
+
+To set the usb port rules
+
+In a Terminal window use sudo nano /etc/udev/rules.d/50-usb-serial.rules to enter and save identity attributes for each 
+attached USB device'50-usb-serial.rules'.
+I used the information from the list of attributes to specify the identity of the devices to a specific USB port.
+ 
+SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", SYMLINK+="ttyUSB_DEVICE4" 
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="ttyUSB_DEVICE6" 
+
+
+Then <ctrl> O <enter> to save the file and <ctrl> X to exit the nano editor. 
+After I created the rules I used the command "sudo udevadm trigger" so the rules will be applied.
+
+I then issued the command "ls -l /dev/ttyUSB*" to list the names and USB ports assigned.
